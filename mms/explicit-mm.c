@@ -95,15 +95,15 @@ static void *coalesce(void *bp)
     size_t next_alloc = GET_ALLOC(HDRP(NEXT_BLKP(bp)));
     size_t size = GET_SIZE(HDRP(bp));  
 
-    // case 1 - 가용블록이 없으면 조건을 추가할 필요 없다. 맨 밑에서 freelist에 넣어줌
-    // case 2
+    // case 1 - 이전, 다음 가용 블록 없을 경우 맨 밑에서 freelist에 넣어줌
+    // case 2 - 이전 블록은 할당 되어있고, 다음 블록만 가용할 경우
     if(prev_alloc && !next_alloc){
         remove_block(NEXT_BLKP(bp));
         size += GET_SIZE(HDRP(NEXT_BLKP(bp)));
         PUT(HDRP(bp), PACK(size,0));
         PUT(FTRP(bp), PACK(size,0));
     }
-    // case 3
+    // case 3 - 이전 블록만 가용하고, 다음 블록은 할당 되어있을 경우
     else if(!prev_alloc && next_alloc){
         remove_block(PREV_BLKP(bp));
         size += GET_SIZE(HDRP(PREV_BLKP(bp)));
@@ -112,15 +112,15 @@ static void *coalesce(void *bp)
         PUT(FTRP(bp), PACK(size,0));
 
     }
-    // case 4
+    // case 4 - 이전 블록과 다음 블록 모두 가용할 경우
     else if(!prev_alloc && !next_alloc){
         remove_block(PREV_BLKP(bp));
         remove_block(NEXT_BLKP(bp));
         size += GET_SIZE(HDRP(PREV_BLKP(bp))) + 
                 GET_SIZE(FTRP(NEXT_BLKP(bp)));
-        PUT(HDRP(PREV_BLKP(bp)), PACK(size,0));
-        PUT(FTRP(NEXT_BLKP(bp)), PACK(size,0));
         bp = PREV_BLKP(bp); //bp를 prev로 옮겨줌
+        PUT(HDRP(bp), PACK(size,0));
+        PUT(FTRP(bp), PACK(size,0));
     }
     put_free_block(bp); // 연결이 된 블록을 free list 에 추가
     return bp;
@@ -207,8 +207,8 @@ void put_free_block(void *bp){
     free_listp = bp;
 }
 
+
 void remove_block(void *bp){
-    // 첫 번째 블록을 없앨 때
     if(bp == free_listp){
         PRED_FREEP(SUCC_FREEP(bp)) = NULL;
         free_listp = SUCC_FREEP(bp);
