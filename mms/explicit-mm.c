@@ -14,7 +14,6 @@
 #include <assert.h>
 #include <unistd.h>
 #include <string.h>
-// @@@@@ explicit @@@@@
 #include <sys/mman.h>
 #include <errno.h>
 
@@ -83,6 +82,11 @@ int mm_init(void)
     PUT(heap_listp + 5*WSIZE,PACK(0,1)); // 에필로그 헤더 0/1
 
     free_listp = heap_listp + DSIZE; 
+
+    // 이유는 모르겠지만, 이부분을 추가하면 3점이 올라감..
+    if (extend_heap(4) == NULL) {
+        return -1;
+    }
 
     if (extend_heap(CHUNKSIZE/WSIZE) == NULL) 
         return -1;
