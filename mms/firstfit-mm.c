@@ -1,14 +1,3 @@
-/*
- * mm-naive.c - The fastest, least memory-efficient malloc package.
- *
- * In this naive approach, a block is allocated by simply incrementing
- * the brk pointer.  A block is pure payload. There are no headers or
- * footers.  Blocks are never coalesced or reused. Realloc is
- * implemented directly using mm_malloc and mm_free.
- *
- * NOTE TO STUDENTS: Replace this header comment with your own header
- * comment that gives a high level description of your solution.
- */
 #include <stdio.h>
 #include <stdlib.h>
 #include <assert.h>
@@ -84,6 +73,11 @@ int mm_init(void)
     PUT(heap_listp + (3 * WSIZE), PACK(0, 1));     // Epilogue header
     heap_listp += (2 * WSIZE);
 
+    if (extend_heap(4) == NULL)
+    {
+        return -1;
+    }
+
     // 두 가지 다른 경우에 호출된다.
     // (1) 힙이 초기화 될때 (2) mm_malloc이 적당한 맞춤fit을 찾지 못했을 때
     if (extend_heap(CHUNKSIZE / WSIZE) == NULL)
@@ -139,7 +133,7 @@ void *mm_malloc(size_t size)
 
 /*
  * mm_realloc - Implemented simply in terms of mm_malloc and mm_free
- 
+
 - 만약 ptr == NULL 이면, `mm_malloc(size)`과 동일한 동작을 수행한다.
 
 - 만약 size가 0 이면, `mm_free(ptr)`와 동일한 동작을 수행한다.
@@ -152,25 +146,29 @@ void *mm_malloc(size_t size)
  */
 void *mm_realloc(void *ptr, size_t size)
 {
-    if (ptr == NULL) {
+    if (ptr == NULL)
+    {
         return mm_malloc(size);
     }
 
-    if (size == 0) {
+    if (size == 0)
+    {
         mm_free(ptr);
         return;
-    } 
+    }
 
     void *new_ptr = mm_malloc(size);
-    if (new_ptr == NULL) {
+    if (new_ptr == NULL)
+    {
         return NULL;
     }
     size_t csize = GET_SIZE(HDRP(ptr));
-    if (size < csize) { // 재할당 요청에 들어온 크기보다, 기존 블록의 크기가 크다면
+    if (size < csize)
+    {                 // 재할당 요청에 들어온 크기보다, 기존 블록의 크기가 크다면
         csize = size; // 기존 블록의 크기를 요청에 들어온 크기 만큼으로 줄인다.
     }
     memcpy(new_ptr, ptr, csize); // ptr 위치에서 csize만큼의 크기를 new_ptr의 위치에 복사함
-    mm_free(ptr); // 기존 ptr의 메모리는 할당 해제해줌
+    mm_free(ptr);                // 기존 ptr의 메모리는 할당 해제해줌
     return new_ptr;
 }
 
@@ -218,7 +216,7 @@ static void *coalesce(void *ptr)
     size_t size = GET_SIZE(HDRP(ptr));                   // 현재 블록의 사이즈
 
     // 이전 블록이랑 다음 블록이 모두 할당되어 있다면, 그대로 반환
-    if (prev_alloc && next_alloc) 
+    if (prev_alloc && next_alloc)
     {
         return ptr;
     }
@@ -230,7 +228,7 @@ static void *coalesce(void *ptr)
         PUT(FTRP(ptr), PACK(size, 0));
     }
     // 다음 블록이 이미 할당 되어 있고, 이전 블록이 free 라면
-    else if (!prev_alloc && next_alloc) 
+    else if (!prev_alloc && next_alloc)
     {
         size += GET_SIZE(HDRP(PREV_BLKP(ptr)));
         PUT(FTRP(ptr), PACK(size, 0));
@@ -238,7 +236,7 @@ static void *coalesce(void *ptr)
         ptr = PREV_BLKP(ptr);
     }
     // 이전과 다음 블록이 모두 free일 경우
-    else 
+    else
     {
         size += GET_SIZE(HDRP(PREV_BLKP(ptr))) + GET_SIZE(FTRP(NEXT_BLKP(ptr)));
         PUT(HDRP(PREV_BLKP(ptr)), PACK(size, 0));
@@ -248,7 +246,7 @@ static void *coalesce(void *ptr)
     return ptr;
 }
 
-//first fit
+// first fit
 static void *find_fit(size_t asize)
 {
     void *ptr;
@@ -279,9 +277,9 @@ static void place(void *ptr, size_t asize)
         PUT(FTRP(ptr), PACK(csize - asize, 0));
     }
     // 블록 내의 할당 부분을 제외한 나머지 공간의 크기가 2 * 더블 워드(8byte)보다 작을 경우에는, 그냥 해당 블록의 크기를 그대로 사용한다
-    else 
+    else
     {
-        
+
         PUT(HDRP(ptr), PACK(csize, 1));
         PUT(FTRP(ptr), PACK(csize, 1));
     }
